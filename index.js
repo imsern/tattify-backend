@@ -6,14 +6,14 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const app = express()
-app.use(cors())
+app.use(cors({ origin: '*' }))
 app.use(express.json())
 
 app.post('/send', async (req, res) => {
-  const { navn, email, motiv, beskjed } = req.body
+  const { navn, email, motiv, beskjed, tilTatovør } = req.body
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: 'gmail', // Kan byttes ut ved behov
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASS
@@ -22,23 +22,25 @@ app.post('/send', async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: `"Aliens Tattoo" <${process.env.MAIL_USER}>`,
-      to: process.env.MAIL_RECEIVER,
-      subject: 'Ny henvendelse fra nettsiden',
-      text: `
-        Navn: ${navn}
-        E-post: ${email}
-        Motiv: ${motiv}
-        Beskjed: ${beskjed}
-      `
-    })
+  from: `"Tattify" <${process.env.MAIL_USER}>`,
+  to: tilTatovør || process.env.MAIL_RECEIVER,
+  replyTo: email, // sluttbrukerens e-post
+  subject: 'Ny henvendelse fra nettsiden',
+  text: `
+Navn: ${navn}
+E-post: ${email}
+Motiv: ${motiv}
+Melding: ${beskjed}
+  `
+})
+console.log('E-post sendt til:', tilTatovør || process.env.MAIL_RECEIVER)
 
     res.status(200).send({ success: true })
   } catch (e) {
-    console.error(e)
+    console.error('E-postfeil:', e)
     res.status(500).send({ success: false, error: 'Kunne ikke sende e-post' })
   }
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`API kjører på port ${PORT}`))
+app.listen(PORT, () => console.log(`Server kjører på port ${PORT}`))
